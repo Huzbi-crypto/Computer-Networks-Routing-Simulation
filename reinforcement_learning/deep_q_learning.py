@@ -12,19 +12,19 @@ import networkx as nx
 class DeepQLearningRouter:
     """Implements Deep Q-learning algorithm for routing in dynamic networks."""
     
-    def __init__(self, state_size: int, action_size: int, learning_rate: float = 0.001,
+    def __init__(self, graph: nx.Graph, action_size: int, learning_rate: float = 0.001,
                  discount_factor: float = 0.99, exploration_rate: float = 1.0,
                  exploration_decay: float = 0.999, batch_size: int = 32, memory_size: int = 1000):
         """Initialize Deep Q-learning router with hyperparameters."""
-        self.state_size = state_size
+        self.state_size = max(len(list(graph.neighbors(node))) for node in graph.nodes) + 2
         self.action_size = action_size
         self.learning_rate = learning_rate
-        self.discount_factor = 0.99
-        self.exploration_rate = 1.0
+        self.discount_factor = discount_factor
+        self.exploration_rate = exploration_rate
         self.exploration_min = 0.01
-        self.exploration_decay = 0.999
-        self.batch_size = 32
-        self.memory = deque(maxlen=1000)
+        self.exploration_decay = exploration_decay
+        self.batch_size = batch_size
+        self.memory = deque(maxlen=memory_size)
         self.model = self._build_model()
         self.target_model = self._build_model()
         self.update_target_model()
@@ -85,7 +85,12 @@ class DeepQLearningRouter:
         """Get next node using deep Q-learning policy."""
         state = self._get_state_representation(graph, current, target)
         action = self.act(state)
-        return list(graph.neighbors(current))[action]
+        neighbors = list(graph.neighbors(current))
+        if action < len(neighbors):
+            return neighbors[action]
+        else:
+            # Fallback: return a random neighbor if action is out of bounds
+            return random.choice(neighbors) if neighbors else None
         
     def _get_state_representation(self, graph: nx.Graph, current: int, target: int) -> np.ndarray:
         """Convert graph state to neural network input vector."""
@@ -93,6 +98,6 @@ class DeepQLearningRouter:
         state = np.zeros(self.state_size)
         state[0] = current
         state[1] = target
-        for i, neighbor in enumerate(neighbors):
+        for i, neighbor in enumerate(neighbors[:self.state_size - 2]):
             state[2 + i] = graph.edges[current, neighbor]['weight']
         return state

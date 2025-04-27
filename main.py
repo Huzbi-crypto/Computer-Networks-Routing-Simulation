@@ -39,7 +39,9 @@ def main(args=None):
     elif args.algorithm == 'qlearning':
         router = QLearningRouter()
     elif args.algorithm == 'deepq':
-        router = DeepQLearningRouter()
+        graph = network.graph
+        action_size = max(len(list(graph.neighbors(node))) for node in graph.nodes)
+        router = DeepQLearningRouter(graph, action_size)
     else:
         raise ValueError(f'Unknown algorithm: {args.algorithm}')
 
